@@ -17,7 +17,6 @@ def run_player():
     global player
     player = 'D:\\Work\\Gameface-0.0.0.0-Pro\\Player\\Player.exe '
 
-
 def run_test():
 
     sys.stdout = open('D:\\Work\\PyTests\\Logs\\ ' + name, "w", encoding="utf-8")
@@ -62,7 +61,6 @@ def get_tasks(Player):
         if Player in get_all_process[i]:
             return get_all_process[i]
     return []
-
 
 if __name__ == '__main__':
 

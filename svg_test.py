@@ -86,14 +86,3 @@ if __name__ == '__main__':
     create_file_log()
     run_player()
     run_test()
-
-
-
-
-
-
-
-
-
-
-

@@ -6,7 +6,7 @@ import psutil
 emulator_names = [
     'pixel_10.0',
     'pixel_9.0',
-    'pixel_8.1',
+    'pixel_8.0',
     'pixel_7.1',
     'pixel_7.0',
     'pixel_6.0',

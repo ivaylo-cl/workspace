@@ -5,7 +5,7 @@ android_systems = {
     'android-23': 'pixel_6.0',
     'android-24': 'pixel_7.0',
     'android-25': 'pixel_7.1',
-    'android-27': 'pixel_8.1',
+    'android-26': 'pixel_8.0',
     'android-28': 'pixel_9.0',
     'android-29': 'pixel_10.0',
 }
@@ -18,7 +18,6 @@ def install_system():
 
 def create_avd():
     for android_version, android_device in android_systems.items():
-        print(android_version, android_device)
         print('Creating %s' % android_device)
         subprocess.check_output('echo "no" | avdmanager --verbose create avd --force --name "{0}" '
                                 '--device "pixel"--package "system-images;{1};google_apis;x86_64"'

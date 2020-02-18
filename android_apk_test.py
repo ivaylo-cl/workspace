@@ -2,7 +2,6 @@ import os
 import subprocess
 import time
 import psutil
-import argparse
 
 emulator_names = [
     'pixel_10.0',

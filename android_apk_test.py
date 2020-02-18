@@ -48,7 +48,7 @@ def start_emulator(emulator_name):
 
 
 def test_android_apk():
-    emulator_path = os.path.abspath(os.getenv('LOCALAPPDATA') + '\\Android\\Sdk\\emulator\\bin64')
+    emulator_path = os.path.abspath(os.getenv('LOCALAPPDATA') + '/Android/Sdk/emulator/bin64')
 
     directory_path = os.path.dirname(emulator_path)
     os.chdir(directory_path)

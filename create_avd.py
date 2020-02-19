@@ -15,14 +15,14 @@ def install_system():
         print('Installing %s' % system)
         command = 'sdkmanager --install "system-images;%s;google_apis;x86_64'
         subprocess.check_output(command % system, shell=True)
+        # subprocess.check_output('sdkmanager --licenses', shell=True) Licenses should be accepted!
 
 def create_avd():
     for android_version, android_device in android_systems.items():
         print('Creating %s' % android_device)
-        subprocess.check_output('echo "no" | avdmanager --verbose create avd --force --name "{0}" '
-                                '--device "pixel"--package "system-images;{1};google_apis;x86_64"'
-                                ' --tag "google_apis" --abi "x86_64"'.format(android_device, android_version),
-                                shell=True)
+        subprocess.check_output('avdmanager create avd --name "{0}" --package "system-images;{1};google_apis;x86_64" '
+                                '--device "Nexus" --tag "google_apis" '
+                                '--abi "x86_64"'.format(android_device, android_version), shell=True)
         print('Done')
 
 install_system()

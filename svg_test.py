@@ -10,17 +10,17 @@ def create_file_log():
 name = create_file_log()
 print("NAME", name)
 
-path = 'D:\\Work\\PyTests\\Logs\\ ' + name
+path = 'D:/Work/PyTests/Logs/ ' + name
 print("PATH", path)
 
 def run_player():
     global player
-    player = 'D:\\Work\\Gameface-0.0.0.0-Pro\\Player\\Player.exe '
+    player = 'D:/Work/Gameface-0.0.0.0-Pro/Player/Player.exe '
 
 def run_test():
 
-    sys.stdout = open('D:\\Work\\PyTests\\Logs\\ ' + name, "w", encoding="utf-8")
-    file_path = os.path.abspath('D:\\SVG_test\\cohtml-html')
+    sys.stdout = open('D:/Work/PyTests/Logs/ ' + name, "w", encoding="utf-8")
+    file_path = os.path.abspath('D:/SVG_test/cohtml-html')
     path = os.path.abspath('D:/')
 
     for file in os.listdir(file_path):

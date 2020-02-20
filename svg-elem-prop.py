@@ -1,4 +1,4 @@
-# This script remove SVGTestCase tag from .svg files
+'''This script remove SVGTestCase tag from .svg files'''
 
 import os
 import re

@@ -25,7 +25,7 @@ def get_png_name():
                 return png_name
 
 
-def CreateCsvFile():
+def create_csv_file():
     for format in ['utf-8', 'utf-16']:
 
         try:
@@ -91,4 +91,4 @@ def CreateCsvFile():
             print(e)
             continue
 
-CreateCsvFile()
+create_csv_file()

@@ -25,8 +25,9 @@ def get_png_name():
                 return png_name
 
 
-def create_csv_file():
+def CreateCsvFile():
     for format in ['utf-8', 'utf-16']:
+
         try:
             with open('SVG-Log-2020-01-21 13-06-18.txt', 'r', encoding=format) as in_file:
                 with open('SVG-Log-2020-01-21 13-06-18.csv', 'w', encoding=format, newline='') as out_file:
@@ -90,4 +91,4 @@ def create_csv_file():
             print(e)
             continue
 
-create_csv_file()
+CreateCsvFile()

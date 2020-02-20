@@ -1,3 +1,5 @@
+'''This script install android versions and makes avd'''
+
 import subprocess
 
 android_systems = {
@@ -15,7 +17,6 @@ def install_system():
         print('Installing %s' % system)
         command = 'sdkmanager --install "system-images;%s;google_apis;x86_64'
         subprocess.check_output(command % system, shell=True)
-        # subprocess.check_output('sdkmanager --licenses', shell=True) Licenses should be accepted!
 
 def create_avd():
     for android_version, android_device in android_systems.items():

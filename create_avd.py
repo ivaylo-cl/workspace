@@ -2,6 +2,7 @@
 
 import subprocess
 
+
 android_systems = {
     'android-23': 'pixel_6.0',
     'android-24': 'pixel_7.0',
@@ -11,11 +12,13 @@ android_systems = {
     'android-29': 'pixel_10.0',
 }
 
+
 def install_system():
     for system in android_systems.keys():
         print('Installing %s' % system)
         command = 'sdkmanager --install -s "system-images;%s;google_apis;x86_64'
         subprocess.check_output(command % system, shell=True)
+
 
 def create_avd():
     for android_version, android_device in android_systems.items():

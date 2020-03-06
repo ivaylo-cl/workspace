@@ -61,7 +61,7 @@ def wait_for_boot_completed(seconds_to_wait, emulator):
         elapsed_seconds = time.time() - starting_time
         if elapsed_seconds > seconds_to_wait:
             raise Exception("Waited more than %d seconds for loading android %s"
-                            % (seconds_to_wait, emulator_names))
+                            % (seconds_to_wait, emulator_name))
 
 
 def get_sample_apks():
@@ -147,32 +147,35 @@ def install_apk(apk_name):
 
 def verify_android_apk(apk, emulator_name):
     '''Opens an emulator, then gets and installs an apk.
-    Gives information about app backend and activity to start tests.
-    wait_for_boot_completed has to go twice because,
-     Android 9.0 returns 'stopped' before it is loaded.'''
+    Gives information about app backend and activity to start tests.'''
 
     emulator = start_emulator(emulator_name)
-    wait_for_boot_completed(300, emulator)
-    wait_for_boot_completed(300, emulator)
-    install_apk(apk)
 
-    gles_version = get_gles_version(apk)
-    activity_name = convert_to_activity_name(apk)
+    try:
+        # wait_for_boot_completed has to go twice because, Android 9.0 returns 'stopped' before it is loaded
+        wait_for_boot_completed(300, emulator)
+        wait_for_boot_completed(300, emulator)
+        install_apk(apk)
 
-    start_sample(activity_name, gles_version)
-    run_tests(activity_name, gles_version)
-    wait_for_output(emulator, b'emulator: skin_winsys_destroy\r\n', 300)
+        gles_version = get_gles_version(apk)
+        activity_name = convert_to_activity_name(apk)
+
+        start_sample(activity_name, gles_version)
+        run_tests(activity_name, gles_version)
+        wait_for_output(emulator, b'emulator: skin_winsys_destroy\r\n', 300)
+
+    except Exception as error:
+        print("Error while trying to test %s on %s" % (os.path.split(apk)[-1], emulator_name))
+        print('-' * 70)
+        kill_emulator_process()
+        wait_for_output(emulator, b'emulator: skin_winsys_destroy\r\n', 300)
+
 
 if __name__ == '__main__':
     apk_files = get_sample_apks()
 
     for apk in apk_files:
+        if 'CommonSampleApplication' in apk:
+            continue
         for emulator_name in emulator_names:
-            try:
-                verify_android_apk(apk, emulator_name)
-            except Exception as e:
-                print("Error while installing %s: %s" % (os.path.split(apk)[-1], str(e)))
-                print('-' * 70)
-                kill_emulator_process()
-                time.sleep(1)
-                continue
+            verify_android_apk(apk, emulator_name)

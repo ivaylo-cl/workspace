@@ -1,144 +1,178 @@
 import os
 import subprocess
 import time
-import psutil
-
+import re
 
 emulator_names = [
     'pixel_10.0',
     'pixel_9.0',
-    # 'pixel_8.0',
-    # 'pixel_7.1',
-    # 'pixel_7.0',
-    # 'pixel_6.0',
-    # 'pixel_5.1',
+    'pixel_8.0',
+    'pixel_7.1',
+    'pixel_7.0',
+    'pixel_6.0',
 ]
 
 
-gles_to_test = [
-    'gles2',
-    'gles3',
-]
+def kill_emulator_process():
+    subprocess.check_output('adb emu kill', shell=True)
 
 
-activity = [
-    'SampleHelloCohtmlActivity',
-    'SampleNameplatesActivity',
-]
+def start_emulator(emulator_name):
+    ''' Starts an emulator and returns a reference to it, given its name.'''
 
-
-def kill_process():
-    emulator = 'qemu-system-x86_64.exe'
-
-    for process in psutil.process_iter():
-        if process.name() == emulator:
-            process.kill()
-
-
-def hello_cohtml_test():
-    hello_cohtml = subprocess.check_output('python cohtml/Samples/Tests/SampleHelloCohtml.py', shell=True)
-    print(hello_cohtml)
-
-
-def nameplates_test():
-    nameplates = subprocess.check_output('python cohtml/Samples/Tests/SampleNameplates.py', shell=True)
-    print(nameplates)
+    os.environ.get('ANDROID_SDK_ROOT')
+    print('Starting emulator:', emulator_name)
+    command = 'emulator -avd %s -wipe-data -debug surface'
+    emulator = subprocess.Popen(command % emulator_name,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                shell=True)
+    return emulator
 
 
 def wait_for_output(open_emulator, expected_output, seconds_to_wait):
     starting_time = time.time()
+
     for line in iter(open_emulator.stdout.readline, ''):
-        if line == expected_output:
-            elapsed_seconds = time.time() - starting_time
-            if elapsed_seconds > seconds_to_wait:
-                raise Exception("Waited more than %d seconds for output %s" % (seconds_to_wait, expected_output))
+        if expected_output in line:
             break
         else:
-            print(">>> " + str(line.rstrip()))
+            elapsed_seconds = time.time() - starting_time
+            if elapsed_seconds > seconds_to_wait:
+                raise Exception("Waited more than %d seconds for output %s"
+                                % (seconds_to_wait, expected_output))
 
 
-def start_emulator(emulator_name):
-    ''' Starts an emulator and returns a reference to it, given its name'''
+def wait_for_boot_completed(seconds_to_wait, emulator):
+    starting_time = time.time()
 
-    emulator_path = os.path.abspath('C:/Android/Sdk/emulator/bin64')
-    directory_path = os.path.dirname(emulator_path)
-    os.chdir(directory_path)
-    print('Starting emulator:', emulator_name)
-    command = 'emulator -avd %s -wipe-data'
-    return subprocess.Popen(command % emulator_name, stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
+    device_status = b''
+    while device_status != b'stopped':
+        try:
+            time.sleep(2)
+            # Аdding a dummy read in order to not deadlock the subprocess PIPE
+            emulator.stdout.readline()
+            device_status = subprocess.check_output('adb shell getprop init.svc.bootanim',
+                                                    stderr=subprocess.DEVNULL)
+            device_status = device_status.rstrip()
+        except subprocess.CalledProcessError as e:
+            pass
 
-
-def start_and_test_app(gles, activity):
-    '''start app, forward port and run tests'''
-
-    run_app = subprocess.check_output('adb shell am start -n com.coherentlabs.coherentsample.%s/'
-                            'com.coherentlabs.coherentsample.%s' % (gles, activity), shell=True)
-    print(run_app)
-    subprocess.check_output('adb forward tcp:9444 tcp:9444')
-    time.sleep(4)
-
-    if b'Starting: Intent { cmp=com.coherentlabs.coherentsample.gles2' \
-       b'/com.coherentlabs.coherentsample.SampleHelloCohtmlActivity }\r\n' or \
-       b'Starting: Intent { cmp=com.coherentlabs.coherentsample.gles3' \
-       b'/com.coherentlabs.coherentsample.SampleHelloCohtmlActivity }\r\n' in run_app:
-        hello_cohtml_test()
-    else:
-        nameplates_test()
-
-    time.sleep(2)
-
-    subprocess.check_output('adb shell pm clear com.coherentlabs.coherentsample.%s' % gles, shell=True)
-    print('Close apk')
-    time.sleep(1)
-
-    subprocess.check_output('adb uninstall com.coherentlabs.coherentsample.%s' % gles, shell=True)
-    print('Uninstall success')
-    print('-'*70)
-    time.sleep(2)
-    kill_process()
+        elapsed_seconds = time.time() - starting_time
+        if elapsed_seconds > seconds_to_wait:
+            raise Exception("Waited more than %d seconds for loading android %s"
+                            % (seconds_to_wait, emulator_names))
 
 
-def install_apk():
-    '''r = root, d = directory, f = file'''
-
+def get_sample_apks():
     apk_path = os.path.abspath('cohtml/NativeSamples/Unpacked/Samples/Android/')
-    files = []
-    for r, d, f in os.walk(apk_path):
-        for file in f:
-            if '.apk' in file:
-                files.append(os.path.join(r, file))
+    android_apk_files = []
 
-    for f in files:
+    for root, dirs, files in os.walk(apk_path):
+        for file in files:
+            if file.endswith('.apk'):
+                android_apk_files.append(os.path.join(root, file))
+    return android_apk_files
+
+
+def convert_to_activity_name(apk_name):
+    filename = os.path.split(apk_name)[-1]
+    regex = '.*(Sample.*)-(GLES\d).*'
+    match = re.search(regex, filename)
+    return match.group(1) + 'Activity'
+
+
+def get_gles_version(apk_name):
+    if 'gles2' in apk_name:
+        backend_version = 'gles2'
+    elif 'gles3' in apk_name:
+        backend_version = 'gles3'
+    else:
+        raise Exception('Only apps with GLES backend are supported. App: %s' % backend_name)
+    return backend_version
+
+
+def run_hello_cohtml_test():
+    subprocess.check_output('python  cohtml/Samples/Tests/SampleHelloCohtml.py',
+                            shell=True)
+
+
+def run_nameplates_test():
+    subprocess.check_output('python cohtml/Samples/Tests/SampleNameplates.py',
+                            shell=True)
+
+
+def close_app(gles_version):
+    subprocess.check_output('adb shell pm clear com.coherentlabs.coherentsample.%s'
+                            % gles_version, shell=True)
+    print('Apk closed')
+
+
+def uninstall_app(gles_version):
+    subprocess.check_output('adb uninstall com.coherentlabs.coherentsample.%s'
+                            % gles_version, shell=True)
+    print('Uninstall successful')
+    kill_emulator_process()
+    print('The emulator was closed')
+    print('-'*70)
+
+
+def start_sample(activity_name, gles_version):
+    '''Starts an app, forwards the port and runs tests.
+    When test are done, closes and uninstalls the app.'''
+
+    subprocess.check_output('adb shell am start -n com.coherentlabs.coherentsample.%s/'
+                            'com.coherentlabs.coherentsample.%s'
+                            % (gles_version, activity_name), shell=True)
+    subprocess.check_output('adb forward tcp:9444 tcp:9444')
+
+
+def run_tests(activity_name, gles_version):
+    if activity_name == 'SampleHelloCohtmlActivity':
+        run_hello_cohtml_test()
+    elif activity_name == 'SampleNameplatesActivity':
+        run_nameplates_test()
+    else:
+        raise Exception('Unknown sample')
+
+    close_app(gles_version)
+    uninstall_app(gles_version)
+
+
+def install_apk(apk_name):
+    print('Installing:', os.path.split(apk_name)[-1])
+    subprocess.check_output('adb install ' + apk_name, shell=True)
+    print('Install successful')
+
+
+def verify_android_apk(apk, emulator_name):
+    '''Opens an emulator, then gets and installs an apk.
+    Gives information about app backend and activity to start tests.
+    wait_for_boot_completed has to go twice because,
+     Android 9.0 returns 'stopped' before it is loaded.'''
+
+    emulator = start_emulator(emulator_name)
+    wait_for_boot_completed(300, emulator)
+    wait_for_boot_completed(300, emulator)
+    install_apk(apk)
+
+    gles_version = get_gles_version(apk)
+    activity_name = convert_to_activity_name(apk)
+
+    start_sample(activity_name, gles_version)
+    run_tests(activity_name, gles_version)
+    wait_for_output(emulator, b'emulator: skin_winsys_destroy\r\n', 300)
+
+if __name__ == '__main__':
+    apk_files = get_sample_apks()
+
+    for apk in apk_files:
         for emulator_name in emulator_names:
-            boot_device = b'emulator: INFO: boot completed\r\n'
             try:
-                if '.apk' in f:
-                    open_emulator = start_emulator(emulator_name)
-
-                    wait_for_output(open_emulator, boot_device, 300)
-                    print('Installing: ', f)
-
-                    subprocess.check_output('adb install ' + f, shell=True)
-                    print('Install success')
-                    time.sleep(2)
-                    if 'SampleHelloCohtml-GLES2' in f:
-                        start_and_test_app('gles2', 'SampleHelloCohtmlActivity')
-                        continue
-                    if 'SampleHelloCohtml-GLES3' in f:
-                        start_and_test_app('gles3', 'SampleHelloCohtmlActivity')
-                        continue
-                    if 'SampleNameplates-GLES2' in f:
-                        start_and_test_app('gles2', 'SampleNameplatesActivity')
-                        continue
-                    if 'SampleNameplates-GLES3' in f:
-                        start_and_test_app('gles3', 'SampleNameplatesActivity')
-                        continue
-
-
+                verify_android_apk(apk, emulator_name)
             except Exception as e:
-                print("Error while installing %s: %s" % (f, str(e)))
-                kill_process()
+                print("Error while installing %s: %s" % (os.path.split(apk)[-1], str(e)))
+                print('-' * 70)
+                kill_emulator_process()
                 time.sleep(1)
                 continue
-install_apk()
